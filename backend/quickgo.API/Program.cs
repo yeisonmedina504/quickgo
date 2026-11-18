@@ -1,8 +1,9 @@
 using DotNetEnv;
 using quickgo.Infrastructure;
 
-var builder = WebApplication.CreateBuilder(args);
 Env.Load();
+var builder = WebApplication.CreateBuilder(args);
+
 
 var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__PostgresConnection") 
                        ?? throw new InvalidOperationException("Falta la cadena de conexión.");
