@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using quickgo.Application.Features.Clientes.Validators;
+using quickgo.Application.Features.Envios;
+using quickgo.Application.Interfaces;
 using quickgo.Application.Services;
 
 namespace quickgo.Application;
@@ -16,6 +18,7 @@ public static class DependencyInjection {
         services.AddScoped<RolService>();
         services.AddScoped<UsuarioService>();
         services.AddScoped<ConductorService>();
+        services.AddScoped<IEnvioService, EnvioService>();
 
         return services;
     }

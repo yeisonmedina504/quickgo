@@ -14,7 +14,7 @@ public class QuickGoDbContext : DbContext
     {
         _tenant = tenant;
     }
-
+    
     public DbSet<Empresa> Empresas { get; set; }
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }

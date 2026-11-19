@@ -23,6 +23,11 @@ public class AutorizacionTests {
         yield return Fila(typeof(ConductoresController), nameof(ConductoresController.LicenciasPorVencer), Roles.Admin, Roles.Despachador);
         yield return Fila(typeof(ConductoresController), nameof(ConductoresController.Listar), Roles.Admin, Roles.Despachador, Roles.Conductor);
         yield return Fila(typeof(ConductoresController), nameof(ConductoresController.Obtener), Roles.Admin, Roles.Despachador, Roles.Conductor);
+        yield return Fila(typeof(EnviosController), nameof(EnviosController.Crear), Roles.Admin, Roles.Despachador);
+        yield return Fila(typeof(EnviosController), nameof(EnviosController.Listar), Roles.Admin, Roles.Despachador, Roles.Conductor);
+        yield return Fila(typeof(EnviosController), nameof(EnviosController.Obtener), Roles.Admin, Roles.Despachador, Roles.Conductor);
+        yield return Fila(typeof(EnviosController), nameof(EnviosController.Editar), Roles.Admin, Roles.Despachador);
+        yield return Fila(typeof(EnviosController), nameof(EnviosController.Cancelar), Roles.Admin, Roles.Despachador);
     }
 
     private static object[] Fila(Type controlador, string accion, params string[] permitidos) =>

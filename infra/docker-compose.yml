@@ -6,7 +6,7 @@ services:
     env_file:
       - .env # Inyecta las variables exclusivas del contenedor
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-quickgo}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quickgo_dev}
       POSTGRES_DB: ${POSTGRES_DB:-quickgo}
     ports:
@@ -19,5 +19,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      
 volumes:
   postgres_data:
+

@@ -112,6 +112,16 @@ Rutas bajo `/api`. “Todos” = cualquier usuario autenticado.
 | `GET /facturas?estado=`, `GET /facturas/{id}` | Admin, Despachador |
 | `POST /facturas/{id}/pagos` | Admin |
 
+### Envíos (B4)
+
+| Método y ruta | Roles |
+|---|---|
+| `POST /envios` | Admin, Despachador |
+| `GET /envios?estado=&desde=&hasta=`, `GET /envios/{id}` | Admin, Despachador, Conductor (solo los asignados) |
+| `PUT /envios/{id}`, `PATCH /envios/{id}/cancelar` | Admin, Despachador |
+
+El envío requiere un cliente y dos direcciones de la empresa; solo se edita en estado `Pendiente` y se cancela desde `Pendiente` o `Asignado`. El detalle incluye cliente, direcciones y margen (`tarifa - costo_externo`).
+
 ### Subastas (B5)
 
 | Método y ruta | Roles |
@@ -158,5 +168,5 @@ Un cambio de columnas se avisa al equipo y se sube en un PR aparte.
 - B2-04: `GET /api/conductores/{id}/asignaciones`.
 - B2-05: Dockerfile de la API y `docker-compose` completo (API + PostgreSQL).
 - B3-05: GitHub Actions (CI/CD).
-- B4-01 … B4-05: envíos, cotizaciones y seguimiento.
+- B4: cotizaciones y seguimiento de envíos.
 - B5-03 … B5-05: pujar, mejor oferta, retirar puja y adjudicar.
