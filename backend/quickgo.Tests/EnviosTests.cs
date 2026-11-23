@@ -1,7 +1,9 @@
 using quickgo.Application.Common;
 using quickgo.Application.Features.Envios;
 using quickgo.Application.Features.Envios.DTOs;
+using quickgo.Application.Features.Envios.Validators;
 using quickgo.Domain.entities;
+using quickgo.Domain.enums;
 using quickgo.Domain.Enums;
 using quickgo.Infrastructure.Data;
 using quickgo.Infrastructure.Repositories;
@@ -61,7 +63,7 @@ public class EnviosTests
 
         var lista = await fixture.Service.ListarAsync(
             Entorno.EmpresaA,
-            new EnvioFiltroDto
+            new EnvioFiltroRequestDto
             {
                 Estado = EstadoEnvio.Asignado,
                 Desde = fechaTemprana,
@@ -111,6 +113,95 @@ public class EnviosTests
         Assert.Equal(TipoError.NoEncontrado, cancelarAjeno.Error);
     }
 
+    [Fact]
+    public async Task Asignar_ConVehiculoAseguradoYConductorActivo_CambiaEstadoYReservaVehiculo()
+    {
+        var fixture = await CrearFixtureAsync();
+        var recursos = await AgregarRecursosAsignacionAsync(fixture);
+        var envio = NuevoEnvio(
+            fixture, null, EstadoEnvio.Pendiente, DateTimeOffset.UtcNow.AddDays(1));
+        fixture.Db.Envios.Add(envio);
+        await fixture.Db.SaveChangesAsync();
+
+        var resultado = await fixture.Service.AsignarAsync(
+            Entorno.EmpresaA,
+            envio.Id,
+            new AsignarEnvioRequestDto
+            {
+                VehiculoId = recursos.VehiculoId,
+                ConductorId = recursos.ConductorId,
+                CostoExterno = 75m
+            });
+
+        Assert.True(resultado.Exito);
+        Assert.Equal(EstadoEnvio.Asignado, resultado.Valor!.Estado);
+        Assert.Equal(recursos.VehiculoId, resultado.Valor.VehiculoId);
+        Assert.Equal(recursos.ConductorId, resultado.Valor.ConductorId);
+        Assert.Equal(75m, resultado.Valor.CostoExterno);
+        Assert.Equal(EstadoVehiculo.EnServicio,
+            fixture.Db.Vehiculos.Single(item => item.VehiculoId == recursos.VehiculoId).Estado);
+
+        var cancelar = await fixture.Service.CancelarAsync(Entorno.EmpresaA, envio.Id);
+        Assert.True(cancelar.Exito);
+        Assert.Equal(EstadoVehiculo.Disponible,
+            fixture.Db.Vehiculos.Single(item => item.VehiculoId == recursos.VehiculoId).Estado);
+    }
+
+    [Fact]
+    public async Task Asignar_RechazaSeguroVencidoVehiculoNoDisponibleYConductorInactivo()
+    {
+        var fixtureSeguro = await CrearFixtureAsync();
+        var vehiculoSeguro = await AgregarRecursosAsignacionAsync(
+            fixtureSeguro, fechaVencimientoSeguro: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1));
+        var envioSeguro = NuevoEnvio(
+            fixtureSeguro, null, EstadoEnvio.Pendiente, DateTimeOffset.UtcNow.AddDays(1));
+        fixtureSeguro.Db.Envios.Add(envioSeguro);
+        await fixtureSeguro.Db.SaveChangesAsync();
+
+        var resultadoSeguro = await fixtureSeguro.Service.AsignarAsync(
+            Entorno.EmpresaA, envioSeguro.Id, RequestAsignacion(vehiculoSeguro));
+        Assert.Equal(TipoError.Conflicto, resultadoSeguro.Error);
+
+        var fixtureVehiculo = await CrearFixtureAsync();
+        var vehiculoNoDisponible = await AgregarRecursosAsignacionAsync(
+            fixtureVehiculo, estadoVehiculo: EstadoVehiculo.Mantenimiento);
+        var envioVehiculo = NuevoEnvio(
+            fixtureVehiculo, null, EstadoEnvio.Pendiente, DateTimeOffset.UtcNow.AddDays(1));
+        fixtureVehiculo.Db.Envios.Add(envioVehiculo);
+        await fixtureVehiculo.Db.SaveChangesAsync();
+
+        var resultadoVehiculo = await fixtureVehiculo.Service.AsignarAsync(
+            Entorno.EmpresaA, envioVehiculo.Id, RequestAsignacion(vehiculoNoDisponible));
+        Assert.Equal(TipoError.Conflicto, resultadoVehiculo.Error);
+
+        var fixtureConductor = await CrearFixtureAsync();
+        var conductorInactivo = await AgregarRecursosAsignacionAsync(
+            fixtureConductor, estadoConductor: EstadoConductor.Inactivo);
+        var envioConductor = NuevoEnvio(
+            fixtureConductor, null, EstadoEnvio.Pendiente, DateTimeOffset.UtcNow.AddDays(1));
+        fixtureConductor.Db.Envios.Add(envioConductor);
+        await fixtureConductor.Db.SaveChangesAsync();
+
+        var resultadoConductor = await fixtureConductor.Service.AsignarAsync(
+            Entorno.EmpresaA, envioConductor.Id, RequestAsignacion(conductorInactivo));
+        Assert.Equal(TipoError.Conflicto, resultadoConductor.Error);
+    }
+
+    [Fact]
+    public void AsignarValidator_RechazaCostoExternoNegativo()
+    {
+        var validator = new AsignarEnvioRequestValidator();
+        var resultado = validator.Validate(new AsignarEnvioRequestDto
+        {
+            VehiculoId = Guid.NewGuid(),
+            ConductorId = Guid.NewGuid(),
+            CostoExterno = -0.01m
+        });
+
+        Assert.Contains(resultado.Errors,
+            error => error.PropertyName == nameof(AsignarEnvioRequestDto.CostoExterno));
+    }
+
     private async Task<Fixture> CrearFixtureAsync()
     {
         var db = _entorno.CrearDb(Entorno.Tenant(Entorno.EmpresaA, "Despachador"));
@@ -157,6 +248,75 @@ public class EnviosTests
             origenAjenoId,
             destinoAjenoId);
     }
+
+    private static async Task<RecursosAsignacion> AgregarRecursosAsignacionAsync(
+        Fixture fixture,
+        DateOnly? fechaVencimientoSeguro = null,
+        EstadoVehiculo estadoVehiculo = EstadoVehiculo.Disponible,
+        EstadoConductor estadoConductor = EstadoConductor.Activo)
+    {
+        var tipoVehiculoId = Guid.NewGuid();
+        var vehiculoId = Guid.NewGuid();
+        var conductorId = Guid.NewGuid();
+        fixture.Db.TiposVehiculo.Add(new TipoVehiculo
+        {
+            TipoVehiculoId = tipoVehiculoId,
+            Nombre = "Camión de prueba"
+        });
+        fixture.Db.Usuarios.Add(new Usuario
+        {
+            Id = conductorId,
+            EmpresaId = Entorno.EmpresaA,
+            RolId = Entorno.IdRol("Conductor"),
+            PrimerNombre = "Conductor",
+            PrimerApellido = "Prueba",
+            Email = $"{conductorId:N}@quickgo.test",
+            PasswordHash = "hash"
+        });
+        fixture.Db.Conductores.Add(new Conductor
+        {
+            Id = conductorId,
+            EmpresaId = Entorno.EmpresaA,
+            TipoConductor = TipoConductor.Interno,
+            Licencia = $"LIC-{conductorId:N}",
+            VenceLicencia = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1),
+            Estado = estadoConductor
+        });
+        fixture.Db.Vehiculos.Add(new Vehiculo
+        {
+            VehiculoId = vehiculoId,
+            EmpresaId = Entorno.EmpresaA,
+            TipoVehiculoId = tipoVehiculoId,
+            Placa = $"TEST-{vehiculoId:N}",
+            Estado = estadoVehiculo
+        });
+        fixture.Db.DocumentosVehiculo.Add(new DocumentoVehiculo
+        {
+            Id = Guid.NewGuid(),
+            EmpresaId = Entorno.EmpresaA,
+            VehiculoId = vehiculoId,
+            Tipo = TipoDocumento.Seguro,
+            Numero = "POLIZA-TEST",
+            FechaVencimiento = fechaVencimientoSeguro ??
+                DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30)
+        });
+        var asignacionId = Guid.NewGuid();
+        fixture.Db.AsignacionesVehiculoConductor.Add(new AsignacionVehiculoConductor
+        {
+            Id = asignacionId,
+            EmpresaId = Entorno.EmpresaA,
+            VehiculoId = vehiculoId,
+            ConductorId = conductorId,
+            FechaInicio = DateTime.UtcNow
+        });
+        await fixture.Db.SaveChangesAsync();
+        return new RecursosAsignacion(asignacionId, vehiculoId, conductorId);
+    }
+
+    private static AsignarEnvioRequestDto RequestAsignacion(RecursosAsignacion recursos) => new()
+    {
+        AsignacionId = recursos.AsignacionId
+    };
 
     private static Direccion NuevaDireccion(Guid id, Guid empresaId, Guid ciudadId, string calle) => new()
     {
@@ -217,6 +377,8 @@ public class EnviosTests
         Guid ClienteAjenoId,
         Guid OrigenAjenoId,
         Guid DestinoAjenoId);
+
+    private sealed record RecursosAsignacion(Guid AsignacionId, Guid VehiculoId, Guid ConductorId);
 
     private readonly Entorno _entorno = new();
 }

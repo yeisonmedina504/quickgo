@@ -45,6 +45,30 @@ public sealed class EnvioRepository : IEnvioRepository
             envio => envio.EmpresaId == empresaId && envio.Id == id,
             cancellationToken);
 
+    public Task<Vehiculo?> ObtenerVehiculoAsync(
+        Guid empresaId,
+        Guid vehiculoId,
+        CancellationToken cancellationToken = default) =>
+        _context.Vehiculos
+            .Include(vehiculo => vehiculo.Documentos)
+            .FirstOrDefaultAsync(
+                vehiculo => vehiculo.EmpresaId == empresaId && vehiculo.VehiculoId == vehiculoId,
+                cancellationToken);
+
+    public Task<AsignacionVehiculoConductor?> ObtenerAsignacionActivaAsync(
+        Guid empresaId,
+        Guid asignacionId,
+        CancellationToken cancellationToken = default) =>
+        _context.AsignacionesVehiculoConductor
+            .Include(asignacion => asignacion.Vehiculo)
+                .ThenInclude(vehiculo => vehiculo.Documentos)
+            .Include(asignacion => asignacion.Conductor)
+            .FirstOrDefaultAsync(
+                asignacion => asignacion.EmpresaId == empresaId &&
+                              asignacion.Id == asignacionId &&
+                              asignacion.FechaFin == null,
+                cancellationToken);
+
     public async Task<IReadOnlyList<EnvioResponseDto>> ListarAsync(
         Guid empresaId,
         EstadoEnvio? estado,
@@ -130,6 +154,8 @@ public sealed class EnvioRepository : IEnvioRepository
                 destino.Referencia,
                 destino.Lat,
                 destino.Lng),
+            envio.VehiculoId,
+            envio.ConductorId,
             envio.TipoServicio,
             envio.Estado,
             envio.PesoKg,

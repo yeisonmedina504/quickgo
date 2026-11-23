@@ -7,7 +7,7 @@ public interface IEnvioService
 {
     Task<IReadOnlyList<EnvioResponseDto>> ListarAsync(
         Guid empresaId,
-        EnvioFiltroDto filtro,
+        EnvioFiltroRequestDto filtro,
         Guid? conductorId,
         CancellationToken cancellationToken = default);
     Task<Resultado<EnvioResponseDto>> ObtenerAsync(
@@ -27,5 +27,10 @@ public interface IEnvioService
     Task<Resultado<EnvioResponseDto>> CancelarAsync(
         Guid empresaId,
         Guid id,
+        CancellationToken cancellationToken = default);
+    Task<Resultado<EnvioResponseDto>> AsignarAsync(
+        Guid empresaId,
+        Guid id,
+        AsignarEnvioRequestDto request,
         CancellationToken cancellationToken = default);
 }

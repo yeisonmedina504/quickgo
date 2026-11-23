@@ -2,6 +2,7 @@ using quickgo.Application.Common;
 using quickgo.Application.Features.Envios.DTOs;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
+using quickgo.Domain.enums;
 using quickgo.Domain.Enums;
 
 namespace quickgo.Application.Features.Envios;
@@ -17,7 +18,7 @@ public sealed class EnvioService : IEnvioService
 
     public Task<IReadOnlyList<EnvioResponseDto>> ListarAsync(
         Guid empresaId,
-        EnvioFiltroDto filtro,
+        EnvioFiltroRequestDto filtro,
         Guid? conductorId,
         CancellationToken cancellationToken = default) =>
         _repository.ListarAsync(
@@ -137,7 +138,81 @@ public sealed class EnvioService : IEnvioService
                 "Solo se puede cancelar un envío en estado Pendiente o Asignado.");
         }
 
+        if (envio.Estado == EstadoEnvio.Asignado && envio.VehiculoId.HasValue)
+        {
+            var vehiculo = await _repository.ObtenerVehiculoAsync(
+                empresaId, envio.VehiculoId.Value, cancellationToken);
+            if (vehiculo?.Estado == EstadoVehiculo.EnServicio)
+            {
+                vehiculo.Estado = EstadoVehiculo.Disponible;
+            }
+        }
+
         envio.Estado = EstadoEnvio.Cancelado;
+        await _repository.GuardarCambiosAsync(cancellationToken);
+        return await ObtenerResultadoGuardadoAsync(empresaId, envio.Id, cancellationToken);
+    }
+
+    public async Task<Resultado<EnvioResponseDto>> AsignarAsync(
+        Guid empresaId,
+        Guid id,
+        AsignarEnvioRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var envio = await _repository.ObtenerEntidadAsync(empresaId, id, cancellationToken);
+        if (envio is null)
+        {
+            return NoExiste();
+        }
+
+        if (envio.Estado != EstadoEnvio.Pendiente)
+        {
+            return Resultado<EnvioResponseDto>.Conflicto(
+                "Envío no asignable",
+                "Solo se puede asignar un envío en estado Pendiente.");
+        }
+
+        var asignacion = await _repository.ObtenerAsignacionActivaAsync(
+            empresaId, request.AsignacionId, cancellationToken);
+        if (asignacion is null)
+        {
+            return Resultado<EnvioResponseDto>.NoEncontrado(
+                "Asignación no encontrada",
+                "La asignación no existe en tu empresa o ya fue finalizada.");
+        }
+
+        var vehiculo = asignacion.Vehiculo;
+        if (vehiculo.Estado != EstadoVehiculo.Disponible)
+        {
+            return Resultado<EnvioResponseDto>.Conflicto(
+                "Vehículo no disponible",
+                "El vehículo debe estar Disponible para asignarlo.");
+        }
+
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (!vehiculo.Documentos.Any(documento =>
+                documento.Tipo == TipoDocumento.Seguro &&
+                documento.FechaVencimiento >= hoy))
+        {
+            return Resultado<EnvioResponseDto>.Conflicto(
+                "Seguro no vigente",
+                "El vehículo debe tener un seguro vigente para asignarlo.");
+        }
+
+        var conductor = asignacion.Conductor;
+        if (conductor.Estado != EstadoConductor.Activo)
+        {
+            return Resultado<EnvioResponseDto>.Conflicto(
+                "Conductor inactivo",
+                "El conductor debe estar Activo para asignarlo.");
+        }
+
+        envio.VehiculoId = vehiculo.VehiculoId;
+        envio.ConductorId = asignacion.ConductorId;
+        envio.CostoExterno = request.CostoExterno ?? envio.CostoExterno;
+        envio.Estado = EstadoEnvio.Asignado;
+        vehiculo.Estado = EstadoVehiculo.EnServicio;
+
         await _repository.GuardarCambiosAsync(cancellationToken);
         return await ObtenerResultadoGuardadoAsync(empresaId, envio.Id, cancellationToken);
     }

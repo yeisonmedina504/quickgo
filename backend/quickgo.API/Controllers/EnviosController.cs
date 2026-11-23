@@ -17,20 +17,23 @@ public sealed class EnviosController : ApiControllerBase
     private readonly ITenantContext _tenant;
     private readonly IValidator<CrearEnvioRequestDto> _crearValidator;
     private readonly IValidator<ActualizarEnvioRequestDto> _actualizarValidator;
-    private readonly IValidator<EnvioFiltroDto> _filtroValidator;
+    private readonly IValidator<EnvioFiltroRequestDto> _filtroValidator;
+    private readonly IValidator<AsignarEnvioRequestDto> _asignarValidator;
 
     public EnviosController(
         IEnvioService service,
         ITenantContext tenant,
         IValidator<CrearEnvioRequestDto> crearValidator,
         IValidator<ActualizarEnvioRequestDto> actualizarValidator,
-        IValidator<EnvioFiltroDto> filtroValidator)
+        IValidator<EnvioFiltroRequestDto> filtroValidator,
+        IValidator<AsignarEnvioRequestDto> asignarValidator)
     {
         _service = service;
         _tenant = tenant;
         _crearValidator = crearValidator;
         _actualizarValidator = actualizarValidator;
         _filtroValidator = filtroValidator;
+        _asignarValidator = asignarValidator;
     }
 
     [HttpPost]
@@ -63,7 +66,7 @@ public sealed class EnviosController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Listar(
-        [FromQuery] EnvioFiltroDto filtro,
+        [FromQuery] EnvioFiltroRequestDto filtro,
         CancellationToken cancellationToken)
     {
         var errorValidacion = await ValidarAsync(_filtroValidator, filtro, cancellationToken);
@@ -128,6 +131,30 @@ public sealed class EnviosController : ApiControllerBase
         if (!TryGetEmpresaId(out var empresaId)) return TokenSinEmpresa();
 
         return Responder(await _service.CancelarAsync(empresaId, id, cancellationToken));
+    }
+
+
+    [HttpPatch("{id:guid}/asignar")]
+    [Authorize(Roles = Roles.AdminDespachador)]
+    [EndpointSummary("Asignar vehículo y conductor a un envío")]
+    [EndpointDescription("Roles: Admin, Despachador. El envío debe estar Pendiente. La asignación vehículo-conductor debe estar vigente y pertenecer a la empresa; el vehículo debe estar Disponible y tener seguro vigente, y el conductor debe estar Activo.")]
+    [ProducesResponseType(typeof(EnvioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Asignar(
+        Guid id,
+        [FromBody] AsignarEnvioRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var errorValidacion = await ValidarAsync(_asignarValidator, request, cancellationToken);
+        if (errorValidacion is not null) return errorValidacion;
+        if (!TryGetEmpresaId(out var empresaId)) return TokenSinEmpresa();
+
+        return Responder(await _service.AsignarAsync(
+            empresaId, id, request, cancellationToken));
     }
 
     private async Task<IActionResult?> ValidarAsync<T>(

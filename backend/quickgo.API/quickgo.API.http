@@ -91,3 +91,13 @@ Content-Type: application/json
 PATCH {{quickgo.API_HostAddress}}/api/envios/66666666-6666-6666-6666-666666666666/cancelar
 Authorization: Bearer TOKEN
 
+### Asignar vehículo y conductor a un envío pendiente
+PATCH {{quickgo.API_HostAddress}}/api/envios/66666666-6666-6666-6666-666666666666/asignar
+Authorization: Bearer TOKEN
+Content-Type: application/json
+
+{
+  "asignacionId": "77777777-7777-7777-7777-777777777777",
+  "costoExterno": 0
+}
+

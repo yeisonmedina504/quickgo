@@ -19,6 +19,14 @@ public interface IEnvioRepository
         Guid empresaId,
         Guid id,
         CancellationToken cancellationToken = default);
+    Task<Vehiculo?> ObtenerVehiculoAsync(
+        Guid empresaId,
+        Guid vehiculoId,
+        CancellationToken cancellationToken = default);
+    Task<AsignacionVehiculoConductor?> ObtenerAsignacionActivaAsync(
+        Guid empresaId,
+        Guid asignacionId,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<EnvioResponseDto>> ListarAsync(
         Guid empresaId,
         EstadoEnvio? estado,

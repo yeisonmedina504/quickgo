@@ -3,7 +3,7 @@ using quickgo.Application.Features.Envios.DTOs;
 
 namespace quickgo.Application.Features.Envios.Validators;
 
-public sealed class EnvioFiltroValidator : AbstractValidator<EnvioFiltroDto>
+public sealed class EnvioFiltroValidator : AbstractValidator<EnvioFiltroRequestDto>
 {
     public EnvioFiltroValidator()
     {

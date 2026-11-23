@@ -11,6 +11,8 @@ public sealed record EnvioResponseDto(
     EnvioDireccionResponseDto Origen,
     Guid DestinoDireccionId,
     EnvioDireccionResponseDto Destino,
+    Guid? VehiculoId,
+    Guid? ConductorId,
     TipoServicio? TipoServicio,
     EstadoEnvio Estado,
     decimal? PesoKg,
