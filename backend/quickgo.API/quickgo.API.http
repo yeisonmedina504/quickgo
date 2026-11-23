@@ -90,3 +90,4 @@ Content-Type: application/json
 ### Cancelar un envío pendiente o asignado
 PATCH {{quickgo.API_HostAddress}}/api/envios/66666666-6666-6666-6666-666666666666/cancelar
 Authorization: Bearer TOKEN
+

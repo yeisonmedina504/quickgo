@@ -51,29 +51,9 @@ public sealed class EnvioRepository : IEnvioRepository
         DateTimeOffset? desde,
         DateTimeOffset? hasta,
         Guid? conductorId,
-        CancellationToken cancellationToken = default)
-    {
-        var query = ConsultarDetalles(empresaId, conductorId);
-        if (estado.HasValue)
-        {
-            query = query.Where(envio => envio.Estado == estado.Value);
-        }
-
-        if (desde.HasValue)
-        {
-            query = query.Where(envio => envio.FechaProgramada >= desde.Value);
-        }
-
-        if (hasta.HasValue)
-        {
-            query = query.Where(envio => envio.FechaProgramada <= hasta.Value);
-        }
-
-        return await query
-            .OrderBy(envio => envio.FechaProgramada)
-            .ThenBy(envio => envio.Id)
+        CancellationToken cancellationToken = default) =>
+        await ConsultarDetalles(empresaId, conductorId, estado, desde, hasta)
             .ToListAsync(cancellationToken);
-    }
 
     public Task<EnvioResponseDto?> ObtenerDetalleAsync(
         Guid empresaId,
@@ -81,8 +61,8 @@ public sealed class EnvioRepository : IEnvioRepository
         Guid? conductorId,
         CancellationToken cancellationToken = default)
     {
-        return ConsultarDetalles(empresaId, conductorId)
-            .FirstOrDefaultAsync(envio => envio.Id == id, cancellationToken);
+        return ConsultarDetalles(empresaId, conductorId, envioId: id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task AgregarAsync(Envio envio, CancellationToken cancellationToken = default)
@@ -94,7 +74,13 @@ public sealed class EnvioRepository : IEnvioRepository
     public async Task GuardarCambiosAsync(CancellationToken cancellationToken = default) =>
         await _context.SaveChangesAsync(cancellationToken);
 
-    private IQueryable<EnvioResponseDto> ConsultarDetalles(Guid empresaId, Guid? conductorId) =>
+    private IQueryable<EnvioResponseDto> ConsultarDetalles(
+        Guid empresaId,
+        Guid? conductorId,
+        EstadoEnvio? estado = null,
+        DateTimeOffset? desde = null,
+        DateTimeOffset? hasta = null,
+        Guid? envioId = null) =>
         from envio in _context.Envios.AsNoTracking()
         join cliente in _context.Clientes.AsNoTracking() on envio.ClienteId equals cliente.Id
         join origen in _context.Direcciones.AsNoTracking() on envio.OrigenDireccionId equals origen.Id
@@ -105,7 +91,12 @@ public sealed class EnvioRepository : IEnvioRepository
               && cliente.EmpresaId == empresaId
               && origen.EmpresaId == empresaId
               && destino.EmpresaId == empresaId
+              && (!envioId.HasValue || envio.Id == envioId.Value)
+              && (!estado.HasValue || envio.Estado == estado.Value)
+              && (!desde.HasValue || envio.FechaProgramada >= desde.Value)
+              && (!hasta.HasValue || envio.FechaProgramada <= hasta.Value)
               && (!conductorId.HasValue || envio.ConductorId == conductorId.Value)
+        orderby envio.FechaProgramada, envio.Id
         select new EnvioResponseDto(
             envio.Id,
             envio.ClienteId,
