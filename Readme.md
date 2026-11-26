@@ -14,8 +14,6 @@ quickgo/
 \-- README.md       este archivo
 ```
 
-> El frontend (React) aun no esta en este repositorio.
-
 ## Tecnologias
 
 | Capa | Tecnologia |
@@ -73,4 +71,4 @@ Las instrucciones completas, la lista de endpoints y como correr las pruebas est
 - Una rama por historia: `feature/B#-##`, PR revisado por otro integrante y *squash* a `develop`/`main`.
 - Todo endpoint toma la empresa del token; nunca del cuerpo de la peticion.
 - Cada historia incluye al menos una prueba con dos empresas para comprobar el aislamiento.
-- **Nunca** subas archivos `.env`, claves ni contrasenas: estan en el `.gitignore`. Sube solo los `*.env.example`.
+
