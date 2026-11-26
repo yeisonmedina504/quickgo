@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -30,10 +31,20 @@ public class JwtTokenService : ITokenService {
             }),
             SigningCredentials = new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Key)),
-                SecurityAlgorithms.HmacSha256)
+                SecurityAlgorithms.HmacSha256),
+            EncryptingCredentials = new EncryptingCredentials(
+                new SymmetricSecurityKey(GetEncryptionKeyBytes()),
+                SecurityAlgorithms.Aes256KW,
+                SecurityAlgorithms.Aes256CbcHmacSha512)
         };
 
-        var token = new JsonWebTokenHandler().CreateToken(descriptor);
-        return new TokenGenerado(token, expira);
+        var handler = new JsonWebTokenHandler();
+        return new TokenGenerado(handler.CreateToken(descriptor), expira);
+    }
+
+    private byte[] GetEncryptionKeyBytes() {
+        var raw = string.IsNullOrWhiteSpace(_options.EncryptionKey) ? _options.Key : _options.EncryptionKey;
+        var bytes = Encoding.UTF8.GetBytes(raw);
+        return bytes.Length == 32 ? bytes : SHA256.HashData(bytes);
     }
 }

@@ -22,35 +22,38 @@ backend/
 
 ## Puesta en marcha
 
+### Opcion rapida (recomendada para desarrollo local)
+
+No necesitas crear `.env` para la API en Development: `appsettings.Development.json` ya trae una conexion por defecto a `localhost:5433` y `MigrarAlIniciar=true`.
+
 ```bash
 # 1) PostgreSQL (desde la raiz del repo)
 cd infra
-cp .env.example .env
 docker compose up -d            # Postgres 16 en localhost:5433
 
-# 2) Variables de la API
-cd ../backend/quickgo.API
-cp .env.example .env
-
-# 3) Ejecutar
-cd ..
+# 2) Ejecutar API (aplica migraciones al iniciar)
+cd ../backend
 dotnet run --project quickgo.API    # http://localhost:5010
 ```
 
-Al iniciar, si `MigrarAlIniciar=true`, la API aplica las migraciones pendientes (`MigracionesHostedService`). Las migraciones estan en `quickgo.Infrastructure/Data/Migrations`.
+### Opcion con .env (cuando quieras sobreescribir valores)
 
-### Variables de entorno
+```bash
+# 1) PostgreSQL
+cd infra
+cp .env.example .env            # Windows: copy .env.example .env
+docker compose up -d
 
-Se leen del archivo `quickgo.API/.env` (no se sube a git) o de variables del sistema.
+# 2) Variables de la API
+cd ../backend/quickgo.API
+cp .env.example .env            # Windows: copy .env.example .env
 
-| Variable | Descripcion |
-|---|---|
-| `ConnectionStrings__PostgresConnection` | Cadena de conexion. Debe coincidir con `infra/.env` (puerto **5433** por defecto del repo). |
-| `Jwt__Key` | Clave de firma del JWT, **minimo 32 caracteres**. Obligatoria fuera de Development. |
-| `Jwt__ExpiraMinutos` | Duracion del token (60 por defecto). |
-| `MigrarAlIniciar` | `true` aplica migraciones al arrancar. En `appsettings.json` es `false`; en Development es `true`. |
+# 3) Ejecutar
+cd ..
+dotnet run --project quickgo.API
+```
 
-`appsettings.Development.json` trae una clave JWT de desarrollo; **nunca la uses en produccion**.
+Las migraciones estan en `quickgo.Infrastructure/Data/Migrations` y se aplican al iniciar cuando `MigrarAlIniciar=true`.
 
 ## Datos iniciales (seed)
 

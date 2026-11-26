@@ -3,14 +3,15 @@
  Uso (con la API corriendo y Postgres arriba):
      powershell -ExecutionPolicy Bypass -File .\probar-todo.ps1
  Parametros: -Base (URL de la API), -Contenedor (contenedor de Postgres), -Usuario, -Db, -SinEsperaCierre.
- Con el compose de infra/:  -Contenedor postgres-quickgo -Usuario quickgo
- Nota: el script usa "wsl docker exec"; si Docker corre nativo en Windows, quita "wsl" en la funcion Psql.
+ Con el compose de infra/ (recomendado):
+     .\probar-todo.ps1 -Contenedor postgres-quickgo -Usuario quickgo -Db quickgo
+ Nota: la funcion Psql detecta automaticamente docker/podman (nativo o via WSL).
  Cada ejecucion crea empresas nuevas con datos unicos, asi que se puede repetir sin reiniciar la base.
 #>
 param(
     [string]$Base = "http://localhost:5010",
-    [string]$Contenedor = "quickgo-pg",
-    [string]$Usuario = "postgres",
+    [string]$Contenedor = "postgres-quickgo",
+    [string]$Usuario = "quickgo",
     [string]$Db = "quickgo",
     [switch]$SinEsperaCierre
 )
@@ -57,7 +58,24 @@ function Verificar($Nombre, $Condicion, $Detalle = "la condicion no se cumplio")
 function Cuenta($o) { if ($null -eq $o) { 0 } else { @($o).Count } }
 function Dia($n) { (Get-Date).AddDays($n).ToString("yyyy-MM-dd") }
 function Iso($d) { (Get-Date).ToUniversalTime().AddDays($d).ToString("yyyy-MM-ddTHH:mm:ssZ") }
-function Psql($sql) { $sql | wsl docker exec -i $Contenedor psql -U $Usuario -d $Db -v ON_ERROR_STOP=1 2>&1 }
+function Psql($sql) {
+    $engines = @(
+        @{ Cmd = "docker"; Args = @("exec", "-i", $Contenedor, "psql", "-U", $Usuario, "-d", $Db, "-v", "ON_ERROR_STOP=1") },
+        @{ Cmd = "podman"; Args = @("exec", "-i", $Contenedor, "psql", "-U", $Usuario, "-d", $Db, "-v", "ON_ERROR_STOP=1") },
+        @{ Cmd = "wsl";    Args = @("docker", "exec", "-i", $Contenedor, "psql", "-U", $Usuario, "-d", $Db, "-v", "ON_ERROR_STOP=1") },
+        @{ Cmd = "wsl";    Args = @("podman", "exec", "-i", $Contenedor, "psql", "-U", $Usuario, "-d", $Db, "-v", "ON_ERROR_STOP=1") }
+    )
+    foreach ($e in $engines) {
+        if (-not (Get-Command $e.Cmd -ErrorAction SilentlyContinue)) { continue }
+        $prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        $out = $sql | & $e.Cmd @($e.Args) 2>&1
+        $code = $LASTEXITCODE
+        $ErrorActionPreference = $prev
+        if ($code -eq 0) { $global:LASTEXITCODE = 0; return $out }
+    }
+    $global:LASTEXITCODE = 1
+    return "No se pudo ejecutar psql en el contenedor '$Contenedor'. Verifica que Docker/Podman este corriendo y que el contenedor exista."
+}
 
 $rolAdmin = "a0000000-0000-0000-0000-000000000001"
 $rolDesp  = "a0000000-0000-0000-0000-000000000002"
@@ -83,7 +101,7 @@ INSERT INTO ciudades (id, departamento_id, nombre, codigo_postal) VALUES
  ('33333333-0000-0000-0000-000000000002','22222222-0000-0000-0000-000000000002','San Pedro Sula','21101') ON CONFLICT DO NOTHING;
 "@
 $r = Psql $seed
-Verificar "seed.sql aplicado (Postgres en WSL responde)" ($LASTEXITCODE -eq 0) ($r | Out-String)
+Verificar "seed.sql aplicado (Postgres responde)" ($LASTEXITCODE -eq 0) ($r | Out-String)
 
 # ---------------------------------------------------------------
 Seccion "0. Salud"

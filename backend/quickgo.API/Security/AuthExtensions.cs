@@ -21,6 +21,11 @@ public static class AuthExtensions {
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.AddSingleton<ITokenService, JwtTokenService>();
 
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key));
+        var encRaw = string.IsNullOrWhiteSpace(jwt.EncryptionKey) ? jwt.Key : jwt.EncryptionKey;
+        var encBytes = Encoding.UTF8.GetBytes(encRaw);
+        var encryptionKey = new SymmetricSecurityKey(encBytes.Length == 32 ? encBytes : System.Security.Cryptography.SHA256.HashData(encBytes));
+
         var auth = services.AddAuthentication(EsquemaInteligente)
             // En Development, si llega X-Empresa-Id se usa el modo Dev; en cualquier otro caso, JWT.
             .AddPolicyScheme(EsquemaInteligente, "JWT o headers Dev", options => {
@@ -38,7 +43,8 @@ public static class AuthExtensions {
                     ValidAudience = jwt.Audience,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+                    IssuerSigningKey = signingKey,
+                    TokenDecryptionKey = encryptionKey,
                     ClockSkew = TimeSpan.FromMinutes(1),
                     NameClaimType = ClaimNames.UserId,
                     RoleClaimType = ClaimNames.Rol
