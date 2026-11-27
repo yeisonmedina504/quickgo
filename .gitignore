@@ -139,3 +139,5 @@ postgres_data/
 *.temp
 *.swp
 *~
+# ---------- Otros ----------
+.figma/
