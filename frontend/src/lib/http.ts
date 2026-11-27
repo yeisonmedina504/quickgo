@@ -1,6 +1,8 @@
 /** Cliente HTTP para la API de QuickGo (errores en formato ProblemDetails). */
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+/** Modo demostración: responde con datos de prueba sin backend (VITE_API_MOCKS=true). */
+export const MOCKS_ENABLED = import.meta.env.VITE_API_MOCKS === 'true'
 
 export type FieldErrors = Record<string, string[]>
 
@@ -43,6 +45,11 @@ interface RequestOptions {
 }
 
 export async function http<T>(path: string, { method = 'GET', body, token, signal }: RequestOptions = {}): Promise<T> {
+  if (MOCKS_ENABLED) {
+    const { mockRequest } = await import('@/mocks/handlers')
+    return mockRequest<T>(path, { method, body, token })
+  }
+
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`

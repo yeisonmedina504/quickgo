@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router'
+import { queryClient } from '@/app/queryClient'
 import { login } from '@/features/login/api/login.api'
 import { saveSession } from '@/lib/session'
 import { RegistroForm } from './RegistroForm'
@@ -25,6 +26,7 @@ export function RegistroPage() {
         onSuccess={async (_empresa, values) => {
           // La empresa ya existe: se inicia sesión con la cuenta Admin recién creada.
           try {
+            queryClient.clear()
             saveSession(await login({ email: values.email, password: values.password }))
             navigate('/panel', { replace: true })
           } catch {

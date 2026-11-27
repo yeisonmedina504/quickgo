@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router'
+import { queryClient } from '@/app/queryClient'
 import { Alert } from '@/components/ui/Alert'
 import { ButtonLink } from '@/components/ui/Button'
+import { MOCKS_ENABLED } from '@/lib/http'
 import { saveSession } from '@/lib/session'
 import { LoginForm } from './LoginForm'
 
@@ -29,9 +31,18 @@ export function LoginPage() {
         </Alert>
       )}
 
+      {MOCKS_ENABLED && (
+        <Alert tone="info" title="Modo demostración">
+          Usa <span className="font-mono">admin@quickgo.demo</span> (transportista) o{' '}
+          <span className="font-mono">cliente@quickgo.demo</span> (cliente) con la contraseña{' '}
+          <span className="font-mono">Demo1234</span>.
+        </Alert>
+      )}
+
       <LoginForm
         defaultEmail={state.email}
         onSuccess={(session) => {
+          queryClient.clear()
           saveSession(session)
           navigate('/panel', { replace: true })
         }}

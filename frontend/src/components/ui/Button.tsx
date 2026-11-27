@@ -22,7 +22,7 @@ const variants: Record<Variant, string> = {
 }
 
 const base =
-  'inline-flex h-12 items-center justify-center gap-2 rounded-control px-6 text-body font-semibold transition-colors duration-150'
+  'inline-flex h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control px-6 text-body font-semibold transition-colors duration-150'
 
 export function Button({
   variant = 'primary',
