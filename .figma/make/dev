@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# La vista previa de Figma no puede alcanzar el backend .NET local: usar datos de demostración.
-export VITE_API_MOCKS="${VITE_API_MOCKS:-true}"
-
-exec pnpm --dir frontend exec vite --host 0.0.0.0 --port "$PORT"

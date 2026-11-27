@@ -1,6 +1,0 @@
-{
-  "installOn": [
-    "frontend/package.json",
-    "frontend/pnpm-lock.yaml"
-  ]
-}
