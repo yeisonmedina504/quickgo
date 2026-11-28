@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import 'tailwindcss';
 
 @layer base {
   body {
@@ -9,5 +10,77 @@
   
   .dark body {
     @apply bg-asfalto text-papel;
+  }
+}
+/*
+ * QuickGo Design System — tokens oficiales.
+ * Espaciado: escala base de 4 px de Tailwind (1=4, 2=8, 3=12, 4=16, 6=24, 8=32, 12=48, 16=64).
+ */
+@theme {
+  /* Neutros */
+  --color-asfalto: #12171f;
+  --color-asfalto-2: #232c38;
+  /* Texto secundario derivado de asfalto (extensión mínima, contraste AA sobre papel). */
+  --color-asfalto-3: #5b6472;
+
+  /* Superficies */
+  --color-papel: #f6f5f1;
+  --color-blanco: #ffffff;
+  --color-linea: #e2e0d8;
+
+  /* Marca */
+  --color-ambar: #f5a800;
+  --color-ambar-hover: #e09a00;
+  --color-ambar-claro: #fff1cc;
+  --color-ambar-texto: #8a5b00;
+
+  /* Estados */
+  --color-ruta: #166b40;
+  --color-alerta: #b93228;
+  --color-info: #1d5fb8;
+
+  /* Familias */
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Escala tipográfica */
+  --text-display: 3.5rem;
+  --text-display--line-height: 3.75rem;
+  --text-display--font-weight: 800;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 2.625rem;
+  --text-h1--font-weight: 700;
+  --text-h2: 1.625rem;
+  --text-h2--line-height: 2rem;
+  --text-h2--font-weight: 700;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.625rem;
+  --text-h3--font-weight: 600;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
+  --text-overline: 0.75rem;
+  --text-overline--line-height: 1rem;
+  --text-overline--letter-spacing: 0.06em;
+  --text-overline--font-weight: 600;
+
+  /* Radios */
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+}
+
+@layer base {
+  html {
+    @apply bg-papel font-sans text-body text-asfalto antialiased;
+  }
+
+  body {
+    @apply min-h-dvh;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-info;
   }
 }
