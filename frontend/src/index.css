@@ -1,5 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @import 'tailwindcss';
 
+@layer base {
+  body {
+    @apply bg-papel text-asfalto transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-asfalto text-papel;
+  }
+}
 /*
  * QuickGo Design System — tokens oficiales.
  * Espaciado: escala base de 4 px de Tailwind (1=4, 2=8, 3=12, 4=16, 6=24, 8=32, 12=48, 16=64).

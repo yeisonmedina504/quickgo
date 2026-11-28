@@ -1,3 +1,13 @@
+export interface EnvioListado {
+  id: string;
+  codigo: string;
+  origen: string; 
+  destino: string;
+  unidad: string;
+  conductor: string;
+  estado: EstadoEnvio;
+  fechaLlegadaEstimada: string; 
+}
 export type EstadoEnvio = 'Pendiente' | 'Asignado' | 'EnCurso' | 'Completado' | 'Cancelado'
 export type TipoServicio = 'Carga' | 'Grua' | 'Maquinaria'
 
